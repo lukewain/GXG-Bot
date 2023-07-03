@@ -56,13 +56,13 @@ class ErrorHandler(commands.Cog):
                         embed=errorlog.pub_embed, wait=True
                     )
                     _logger.error(
-                        f"Notification message successfully sent in {interaction.channel.id=} {msg.id=}"
+                        f"Notification message successfully sent in {interaction.channel.id=} {msg.id=}"  # type: ignore will always have an id
                     )
                 else:
                     await interaction.response.send_message(embed=errorlog.pub_embed)
             except (discord.Forbidden, discord.HTTPException):
                 _logger.error(
-                    f"Could not send error notification in {interaction.channel.id=}"
+                    f"Could not send error notification in {interaction.channel.id=}"  # type: ignore will always have an id
                 )
 
     @commands.Cog.listener()
@@ -130,7 +130,7 @@ class ErrorHandler(commands.Cog):
                 )
             except discord.Forbidden:
                 _logger.info(
-                    f"Missing permissions {', '.join(perm_strings)} to run command '{ctx.command.qualified_name}' in channel_id={ctx.channel.id}"
+                    f"Missing permissions {', '.join(perm_strings)} to run command '{ctx.command.qualified_name}' in channel_id={ctx.channel.id}"  # type: ignore perm_strings won't be unbound due to specific error
                 )
 
         elif isinstance(error, commands.UserNotFound):
@@ -155,7 +155,7 @@ class ErrorHandler(commands.Cog):
                 traceback.format_exception(type(error), error, error.__traceback__)
             )
             errorlog = await ErrorLog.create(
-                ctx.bot.pool, traceback=trace, item=f"Command: {ctx.command.name}"
+                ctx.bot.pool, traceback=trace, item=f"Command: {ctx.command.name}"  # type: ignore will always have a name
             )
 
             _logger.error("Ignoring exception in command {}:".format(ctx.command))
