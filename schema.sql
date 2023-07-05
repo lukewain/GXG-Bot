@@ -1,24 +1,25 @@
 CREATE TABLE IF NOT EXISTS levels (
-    id BIGINT PRIMARY KEY,
+    user_id BIGINT PRIMARY KEY,
     xp INT NOT NULL,
     modifier FLOAT NOT NULL,
     last_gained BIGINT
 );
 
 CREATE TABLE IF NOT EXISTS warnings (
-    id BIGINT PRIMARY KEY,
-    infractions INT NOT NULL,
-    infraction_reasons TEXT[],
-    removed_infractions INT
+    warning_id SERIAL PRIMARY KEY,
+    user_id BIGINT,
+    reason TEXT NOT NULL,
+    unixtimestamp BIGINT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS immune (
     id BIGINT PRIMARY KEY,
-    added BIGINT NOT NULL
+    type TEXT NOT NULL -- Will either be User or Role
 );
 
-CREATE TABLE muted (
-    id BIGINT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS muted (
+    mute_id SERIAL PRIMARY KEY,
+    id BIGINT,
     reason TEXT,
     duration INT NOT NULL,
     expires BIGINT NOT NULL,
@@ -34,9 +35,15 @@ CREATE TABLE IF NOT EXISTS errorlog (
 
 CREATE TABLE IF NOT EXISTS moderationlog(
     entry_id SERIAL PRIMARY KEY,
-    moderator_id BIGINT PRIMARY KEY,
+    moderator_id BIGINT,
     unixtimestamp BIGINT NOT NULL,
     action TEXT NOT NULL,
     reason TEXT NOT NULL,
     moderatee_id BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS modmail (
+    user_id BIGINT PRIMARY KEY,
+    blocked BOOLEAN DEFAULT FALSE,
+    thread_id BIGINT NOT NULL
 );
