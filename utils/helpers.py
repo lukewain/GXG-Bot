@@ -7,26 +7,53 @@ from dataclasses import dataclass
 import asyncpg
 import json
 
-from typing import Optional
+from typing import Optional, Self
 
 # from src.bot import GXGInteraction
 
-__all__ = ("ModerationLog", "Configuration")
+__all__ = (
+    "ModerationLog",
+    "Configuration",
+    "Muted",
+    "Warning",
+)
 
 
 @dataclass
 class Configuration:
-    warn_threshold: int
-    log_channel_id: int
+    warn_threshold: int | None
+    log_webhook_url: str | None
+    modmail_forum_id: int | None
+    token: str | None
+    db_uri: str | None
+    mute_role_id: int | None
+    error_webhook_url: str | None
 
     @classmethod
     def get_config(cls, /) -> Configuration:
         with open("config.json") as config:
             data = json.load(config)
 
-        results = data.values()
-
         return cls(**data)
+
+    def _update_value(self, item, value) -> Configuration | None:
+        try:
+            with open("config.json") as config:
+                data: dict = json.load(config)
+
+            data[item]
+
+            data[item] = value
+
+            return self.__init__(**data)
+
+        except KeyError:
+            return None
+
+    def update_log_url(self, uri: str) -> Configuration:
+        self._update_value("log_webhook_url", uri)
+
+        return self
 
     async def validate_warn_threshold(
         self, interaction: discord.Interaction, user: discord.Member
@@ -39,6 +66,11 @@ class Configuration:
             return True
         else:
             return False
+
+    def close(self):
+        items = self.__dict__
+        with open("config.json", "w") as config:
+            json.dump(items, config)
 
 
 @dataclass
@@ -228,36 +260,80 @@ class Muted:
 
 @dataclass
 class Warning:
-    id: int
-    infractions: int
-    infraction_reasons: list[str]
+    warning_id: int
+    user_id: int
+    reason: str
+    unixtimestamp: int
+    total_warnings: int
 
     @classmethod
-    async def add(cls, pool: asyncpg.Pool, id: int, reason: str) -> Warning:
+    async def add(cls, pool: asyncpg.Pool, user_id: int, reason: str) -> Warning:
         res = await pool.fetchrow("SELECT * FROM warnings WHERE id=$1", id)
 
         if res:
-            data = await pool.fetchrow(
-                "UPDATE warnings SET infractions = infractions + 1, infraction_reasons = array_append(infraction_reasons, $1) WHERE id=$2 RETURNING *",
+            r = await pool.fetchrow(
+                "INSERT INTO WARNINGS (user_id, reason, unixtimestamp) RETURNING *",
                 reason,
                 id,
             )
         else:
-            data = await pool.fetchrow(
+            r = await pool.fetchrow(
                 "INSERT INTO warnings (id, infractions, infraction_reasons) VALUES ($1, $2, $3) RETURNING *",
                 id,
                 1,
                 [reason],
             )
 
+        tw = await pool.fetchval(
+            "SELECT count(*) FROM warnings WHERE user_id=$1", user_id
+        )
+
+        data = {**res, "total_warnings": tw}
+
         return cls(**data)
 
     @classmethod
-    async def fetch(cls, pool: asyncpg.Pool, id: int) -> Warning | None:
-        res = await pool.fetchrow("SELECT * FROM warnings WHERE id=$1", id)
+    async def fetch(cls, pool: asyncpg.Pool, warn_id: int) -> Warning | None:
+        """
+        |coro|
+
+        Fetches a warning from the database"""
+        res = await pool.fetchrow("SELECT * FROM warnings WHERE warning_id=$1", id)
 
         if not res:
             return None
 
         else:
             return cls(**res)
+
+    @classmethod
+    async def remove(cls, pool: asyncpg.Pool, *, warn_id: int) -> bool:
+        """
+        |coro|
+
+        Removes a warning from the database.
+
+        Parameters
+        ----------
+        pool: `asyncpg.Pool`
+            The database pool to use
+        warn_id: `int`
+            The id to remove
+
+        Returns
+        -------
+        `True`
+            If the warning is deleted
+        `False`
+            If the warning does not exist
+        """
+
+        res = await pool.fetchrow("SELECT * FROM warnings WHERE warning_id=$1", warn_id)
+
+        if not res:
+            return False
+
+        else:
+            await pool.execute("DELETE FROM warnings WHERE warning_id=$1", warn_id)
+
+            return True
