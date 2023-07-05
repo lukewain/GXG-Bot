@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import datetime
 
 import discord
 from discord.ext import commands
@@ -7,7 +8,7 @@ from discord.ext import commands
 import asyncpg
 import aiohttp
 import logging
-from typing import List
+from typing import List, Self
 
 import utils
 
@@ -17,45 +18,38 @@ discord.utils.setup_logging()
 _logger = logging.getLogger("GXGBot")
 
 
-@dataclass()
-class GXGMember:
-    id: int
-    xp: int
-    modifier: float
-    last_gained: int
-
-
 class GXGContext(commands.Context["GXGBot"]):
     """
     A placeholder for the regular commands.Context
     """
 
-    ...
 
-
-class GXGInteraction(discord.Interaction):
+class GXGInteraction(discord.Interaction["GXGBot"]):
     """
     A placeholder for the regular discord.Interaction
     """
 
-    client: GXGBot
-
-    pool: asyncpg.Pool = client.pool  # type: ignore
+    # pool: asyncpg.Pool = client.pool
 
 
 class GXGBot(commands.Bot):
-    def __init__(self, pool: asyncpg.Pool, session: aiohttp.ClientSession):
+    def __init__(
+        self,
+        pool: asyncpg.Pool,
+        session: aiohttp.ClientSession,
+        config: utils.Configuration,
+    ):
         self.pool: asyncpg.Pool = pool
         self.session = session
 
-        self.config = utils.Configuration.get_config()
+        self.config = config
 
         intents = discord.Intents.default()
         intents.message_content = True
 
         self.owner_ids = (874953578509381652, 268815279570681857)
 
-        super().__init__(command_prefix="gxg.", intents=intents)
+        super().__init__(command_prefix=".", intents=intents)
 
     async def get_context(self, message, *, cls=GXGContext):
         # when you override this method, you pass your new Context
@@ -74,39 +68,6 @@ class GXGBot(commands.Bot):
             await self.pool.execute(data.read())
         _logger.info("Tables created")
 
-    async def get_member(
-        self, member: discord.Member | discord.User
-    ) -> GXGMember | None:
-        """
-        |coro|
-
-        Get's the members info from the database
-
-        This does not have a cache but is not a resource intensive operation
-
-        Paramaters
-        ----------
-
-        member: discord.Member | discord.User
-            The member to get the information of
-
-        Returns
-        -------
-        `GXGMember` or `None` depending on the data
-        """
-
-        _logger.debug("Running func [get_member]")
-
-        res: asyncpg.Record = await self.pool.fetchrow(
-            "SELECT * FROM users WHERE id=$1", member.id
-        )
-
-        if res is None:
-            return None
-
-        else:
-            return GXGMember(**res)
-
     async def setup_hook(self):
         self.immune = []
         res: List[asyncpg.Record] = await self.pool.fetch("SELECT * FROM immune")
@@ -115,8 +76,14 @@ class GXGBot(commands.Bot):
             self.immune.append(r["id"])
 
         await self.load_extension("jishaku")
-        await self.load_extension("cogs.errorlog")
-        await self.load_extension("cogs.error_handler")
+        await self.load_extension("cogs.modmail")
+        # await self.load_extension("cogs.errorlog")
+        # await self.load_extension("cogs.error_handler")
+        # await self.load_extension("cogs.moderation")
 
     async def on_ready(self):
         _logger.info(f"Logged in as {self.user}")
+
+    async def close(self):
+        self.config.close()
+        await super().close()
