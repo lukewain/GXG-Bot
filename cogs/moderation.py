@@ -1,24 +1,49 @@
 import datetime
 import os
+import asyncpg
 from humanreadable import Time  # type: ignore
 import discord
-from discord import User, app_commands
+from discord import app_commands
 from discord.ext import commands
 
 from typing import Self
+import re
 
-# from src.bot import GXGBot, GXGInteraction
-from .. import utils
+from src.bot import GXGBot, GXGInteraction
+import utils
 
 
 class Moderation(commands.Cog):
     def __init__(self: Self, bot: GXGBot):
         self.bot = bot
+        self.url_regex = re.compile(
+            r"(?:https?://)?discord(?:app)?\.(?:com/invite|gg)/[a-zA-Z0-9]+/?"
+        )
 
     async def unmute_autocomplete(self, interaction: GXGInteraction, current: str):
-        muted_members = await interaction.pool.fetch(
+        muted_members = await self.bot.pool.fetch(
             "SELECT * FROM muted WHERE expired = False"
         )
+
+    @commands.Cog.listener()
+    async def on_message(self, message: discord.Message):
+        if message.author.id in self.bot.immune:
+            return
+        check = self.url_regex.match(message.content)
+
+        if check is None:
+            pass
+
+        else:
+            await utils.ModerationLog.add_moderation_action(
+                self.bot.pool,
+                self.bot.user.id,  # type: ignore will always have a value as this will only be used when the bot is logged in
+                "Warn",
+                "Sending invite links",
+                message.author.id,
+            )
+
+            await message.delete()
 
     @app_commands.command(name="mute", description="Allows you to mute a user")  # type: ignore
     @app_commands.default_permissions(moderate_members=True)
@@ -31,8 +56,6 @@ class Moderation(commands.Cog):
         duration: str,
     ):
         """
-        |coro|
-
         This is a command that is used to mute members
 
         Parameters
@@ -59,7 +82,7 @@ class Moderation(commands.Cog):
 
         timeout_until = datetime.timedelta(seconds=seconds)
         await user.timeout(timeout_until, reason=reason)
-        role = interaction.guild.get_role(int(os.environ["MUTE_ROLE_ID"]))  # type: ignore  Guild will never be None
+        role = interaction.guild.get_role(int(self.bot.config.mute_role_id))  # type: ignore  Guild will never be None
 
         await user.add_roles(role)  # type: ignore   Error handler will handle this one chief
 
@@ -79,8 +102,6 @@ class Moderation(commands.Cog):
         reason: app_commands.Range[str, 15, 300],
     ):
         """
-        |coro|
-
         A command used to warn members
 
         Parameters
@@ -99,26 +120,9 @@ class Moderation(commands.Cog):
             Check number of warnings user has. If greater than threshold. Alert moderator(s)
         """
 
-        res = await interaction.pool.fetchrow(
-            "SELECT * FROM warnings WHERE id=$1", member.id
+        warning: utils.Warning = await utils.Warning.add(
+            self.bot.pool, member.id, reason
         )
-
-        if not res:
-            await interaction.pool.execute(
-                "INSERT INTO warnings (id, infractions, infraction_reasons, removed_infractions) VALUES ($1, $2, $3, $4)",
-                member.id,
-                1,
-                [reason],
-                0,
-            )
-            infractions = 1
-
-        else:
-            infractions = await interaction.pool.fetchval(
-                "UPDATE warnings SET infractions = infractions + 1, infraction_reasons = array_append(infraction_reasons, $1) WHERE id=$2",
-                reason,
-                member.id,
-            )
 
         log_embed = discord.Embed(color=discord.Color.red())
         log_embed.set_author(
@@ -129,23 +133,157 @@ class Moderation(commands.Cog):
 
         vals = {
             "Reason": reason,
-            "Total Infractions": infractions,
+            "Total Infractions": warning.total_warnings,
             "Moderator": f"{interaction.user} (ID: {interaction.user.id})",
         }
 
         for k, v in vals:
             log_embed.add_field(name=k, value=v, inline=False)
 
-        log_channel: discord.TextChannel | None = self.bot.get_channel(  # type: ignore
-            interaction.client.config.log_channel_id
-        )
-        if not log_channel:
-            log_channel: discord.TextChannel | None = await self.bot.fetch_channel(  # type: ignore
-                interaction.client.config.log_channel_id
+        if self.bot.config.log_webhook_url:
+            log_webhook = discord.Webhook.from_url(url=self.bot.config.log_webhook_url)
+            await log_webhook.send(embed=log_embed)
+            # type: ignore will be raised by error handler if log_channel is None
+        await interaction.response.send_message(embed=pub_embed)
+
+    @app_commands.command(name="infractions")  # type: ignore
+    @app_commands.default_permissions(moderate_members=True)
+    async def infractions(self, interaction: GXGInteraction, user: discord.Member):
+        """
+        A command to view a users infractions
+
+        Paramters
+        ---------
+        user : `discord.Member`
+            The user who's infractions you want to view
+        """
+
+        if user.id in self.bot.immune:
+            embed = discord.Embed(
+                title="Infractions",
+                description="This user is immune to all moderation actions.",
+                color=discord.Color.orange(),
+            )
+            return await interaction.response.send_message(embed=embed)
+
+        # Fetch all the user infractions
+        # This will be done using the moderation log
+
+        logs: list[
+            utils.ModerationLog
+        ] | None = await utils.ModerationLog.get_moderatee_logs(self.bot.pool, user.id)
+
+        if not logs:
+            embed = discord.Embed(
+                title=f"{user}'s Infractions",
+                description="This user has no infractions.",
+                color=discord.Color.orange(),
+            )
+            return await interaction.response.send_message(embed=embed)
+
+        await interaction.response.defer(thinking=True)
+
+        pag = utils.Paginator()
+
+        for action in logs:
+            moderator = self.bot.get_user(action.moderator_id)
+            pag.add_line(
+                f"Infraction ID: {action.entry_id}\nModerator: {moderator}({action.moderator_id})\nReason: {action.reason}\nOn: <t:{action.unixtimestamp}:R>"
             )
 
-        await log_channel.send(embed=log_embed)
-        await interaction.response.send_message(embed=pub_embed)
+        embed = discord.Embed(
+            title=f"{user.mention}'s Infractions", colour=discord.Color.orange()
+        )
+
+        v = utils.PaginatorView(pag, interaction.user, embed=embed)
+
+        await interaction.followup.send(view=v, embed=embed)
+
+    config = app_commands.Group(
+        name="config",
+        description="Commands that you can use to configure the bot",
+        guild_only=True,
+    )
+
+    @config.command(name="log-channel")  # type: ignore
+    async def set_log_channel(
+        self, interaction: GXGInteraction, channel: discord.TextChannel
+    ):
+        """
+        A command used to set the log channel
+
+        Parameters
+        ----------
+
+        channel: `discord.TextChannel`
+            The channel to create the webhook in
+        """
+        if self.bot.config.log_webhook_url:
+            embed = discord.Embed(
+                title="This will overwrite the current channel!",
+                description="Are you sure you want to do this?",
+            )
+            view = utils.ConfirmationView()
+            await interaction.response.send_message(view=view)
+            await view.wait()
+
+            if view.value is None:
+                await interaction.response.edit_message(
+                    content="This view timed out.", view=None
+                )
+            elif view.value:
+                self.log_webhook = await channel.create_webhook(name="GXG-Logging")
+                self.bot.config._update_value("log_webhook_url", self.log_webhook.url)
+                await interaction.response.edit_message(
+                    content="You have updated the `Log Channel ID`!", view=None
+                )
+            else:
+                await interaction.response.edit_message(
+                    content="The `Log Channel ID` had not been updated!", view=None
+                )
+
+        self.log_webhook = await channel.create_webhook(name="GXG-Logging")
+        self.bot.config._update_value("log_webhook_url", self.log_webhook.url)
+
+    @config.command(name="modmail-channel")  # type: ignore
+    async def set_modmail_channel(
+        self, interaction: GXGInteraction, channel: discord.ForumChannel
+    ):
+        """
+        A command used to set the log channel
+
+        Parameters
+        ----------
+
+        channel: `discord.ForumChannel`
+            The channel to create the new modmail's in
+        """
+        if self.bot.config.modmail_forum_id:
+            embed = discord.Embed(
+                title="This will overwrite the current channel!",
+                description="Are you sure you want to do this?",
+            )
+            view = utils.ConfirmationView()
+            await interaction.response.send_message(view=view, embed=embed)
+            await view.wait()
+
+            if view.value is None:
+                await interaction.response.edit_message(
+                    content="This view timed out.", view=None
+                )
+
+            elif view.value:
+                self.bot.config._update_value("mailmod_forum_id", channel.id)
+                await interaction.response.edit_message(
+                    content="You have updated the `MailMod Forum ID`!", view=None
+                )
+            else:
+                await interaction.response.edit_message(
+                    content="The `MailMod Forum ID` had not been updated!", view=None
+                )
+
+        self.bot.config._update_value("mailmod_forum_id", channel.id)
+        await interaction.response.send_message("You have set the `MailMod Forum ID`!")
 
 
 async def setup(bot):
