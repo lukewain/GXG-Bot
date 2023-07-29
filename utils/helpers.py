@@ -4,19 +4,29 @@ import discord
 
 from datetime import datetime
 from dataclasses import dataclass
+from enum import Enum
 import asyncpg
 import json
 
 from typing import Optional, Self
 
-# from src.bot import GXGInteraction
+# from src.bot import NASAInteraction
 
 __all__ = (
     "ModerationLog",
     "Configuration",
     "Muted",
     "Warning",
+    "BlacklistedUser",
+    "Mode",
+    "test_database_conn"
 )
+
+
+class Mode(Enum):
+    "Unrated"
+    "Competitive"
+    "Other"
 
 
 @dataclass
@@ -25,9 +35,13 @@ class Configuration:
     log_webhook_url: str | None
     modmail_forum_id: int | None
     token: str | None
+    dev_uri: str
     db_uri: str | None
+    henrikdev_token: str
     mute_role_id: int | None
     error_webhook_url: str | None
+    level_up_channel: int
+    lfg_channel: int | None
 
     @classmethod
     def get_config(cls, /) -> Configuration:
@@ -70,7 +84,7 @@ class Configuration:
     def close(self):
         items = self.__dict__
         with open("config.json", "w") as config:
-            json.dump(items, config)
+            json.dump(items, config, indent=4)
 
 
 @dataclass
@@ -337,3 +351,79 @@ class Warning:
             await pool.execute("DELETE FROM warnings WHERE warning_id=$1", warn_id)
 
             return True
+
+
+@dataclass
+class BlacklistedUser:
+    id: int
+    moderator_id: int
+    added_at: int
+    in_server: bool
+
+    @classmethod
+    async def create(
+        cls, pool: asyncpg.Pool, user_id: int, moderator_id: int
+    ) -> BlacklistedUser:
+        query = "INSERT INTO blacklist (id, moderator_id, added_at) VALUES ($1, $2, $3) RETURNING * ON CONFLICT (id) DO SELECT * FROM blacklist WHERE id=$1"
+
+        res = await pool.fetchrow(
+            query, user_id, moderator_id, round(datetime.now().timestamp())
+        )
+
+        return cls(**res)
+
+    @classmethod
+    async def fetch(cls, pool: asyncpg.Pool, user_id: int) -> BlacklistedUser | None:
+        query = "SELECT * FROM blacklist WHERE id=$1"
+
+        res = await pool.fetchrow(query, user_id)
+
+        if res:
+            return cls(**res)
+        else:
+            return None
+
+
+@dataclass
+class LFGEntry:
+    id: int
+    msg_id: int
+    author_id: int
+    gamemode: str
+    players: list[int]
+    expires_at: int
+
+    @classmethod
+    async def create(
+        cls,
+        pool: asyncpg.Pool,
+        message_id: int,
+        author_id: int,
+        gamemode: str,
+        players: list[str],
+    ):
+        ...
+
+    @property
+    def mentioned_players(self) -> str:
+        """
+        Returns a string with `\n` separated mentioned players
+        """
+        pstring = ""
+        for _ in self.players:
+            pstring += f"<@{_}>\n"
+
+        return pstring
+
+    @property
+    def embed(self) -> discord.Embed:
+        embed = discord.Embed(title="Looking for ")
+
+        return embed
+
+async def test_database_conn(uri: str) -> bool:
+    try:
+        pool = asyncpg.Pool(uri)
+        return True
+    except ConnectionRefusedError:
+        return False
