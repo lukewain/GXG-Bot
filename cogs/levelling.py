@@ -38,7 +38,7 @@ class Levelling(commands.Cog):
             user = await self.bot.fetch_user(member.id)
 
         await chnl.send(
-            f"Congrats {user.name}! You just advanced to level {member.level}"
+            f"Congrats {user.mention}! You just advanced to level {member.level}"
         )
 
     # Commands
