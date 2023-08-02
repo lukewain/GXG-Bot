@@ -1,3 +1,6 @@
 *.pyc
 .env
 config.json
+
+/venv
+/venv-old

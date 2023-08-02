@@ -6,7 +6,7 @@ import asyncio
 from typing import Optional
 from logging import getLogger
 
-from src.bot import GXGBot
+from src.bot import NASABot
 from .errorlog import ErrorLog
 
 log = getLogger("cogs.modmail")
@@ -67,7 +67,7 @@ class WebhookManager:
 
 
 class ModMail(commands.Cog):
-    def __init__(self, bot: GXGBot):
+    def __init__(self, bot: NASABot):
         self.bot = bot
         self.manager: WebhookManager | None = None
         self.concurrency = commands.MaxConcurrency(
@@ -114,10 +114,10 @@ class ModMail(commands.Cog):
     @property
     def welcome_embed(self) -> discord.Embed:
         embed = discord.Embed(
-            title="Welcome to GXG's modmail!",
+            title="Welcome to NASA's modmail!",
             description=(
                 "Hello there!"
-                "You have now been put in contact with GXG's moderation team!"
+                "You have now been put in contact with NASA's moderation team!"
                 "This conversation will be kept private between you and the moderation team."
                 "We will reply as soon as possible"
             ),
@@ -165,7 +165,7 @@ class ModMail(commands.Cog):
 
         if not user_id:
             return
-        user = self.bot.get_user(user_id)
+        user = await self.bot.get_or_fetch(user_id)
         try:
             if not user:
                 user = await self.bot.fetch_user(user_id)
@@ -204,5 +204,5 @@ class ModMail(commands.Cog):
             await thread.edit(name=str(after))
 
 
-async def setup(bot: GXGBot):
+async def setup(bot: NASABot):
     await bot.add_cog(ModMail(bot))

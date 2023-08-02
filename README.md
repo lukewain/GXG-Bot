@@ -1,3 +1,3 @@
-# GXG Bot
+# NASA Bot
 
-A multipurpose bot made for [GXG's Server](https://discord.gg/gxg)
+A multipurpose bot made for [NASA's Server](https://discord.gg/NASA)

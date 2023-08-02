@@ -9,18 +9,18 @@ from discord.ext import commands
 from typing import Self
 import re
 
-from src.bot import GXGBot, GXGInteraction
+from src.bot import NASABot, NASAInteraction
 import utils
 
 
 class Moderation(commands.Cog):
-    def __init__(self: Self, bot: GXGBot):
+    def __init__(self: Self, bot: NASABot):
         self.bot = bot
         self.url_regex = re.compile(
             r"(?:https?://)?discord(?:app)?\.(?:com/invite|gg)/[a-zA-Z0-9]+/?"
         )
 
-    async def unmute_autocomplete(self, interaction: GXGInteraction, current: str):
+    async def unmute_autocomplete(self, interaction: NASAInteraction, current: str):
         muted_members = await self.bot.pool.fetch(
             "SELECT * FROM muted WHERE expired = False"
         )
@@ -50,7 +50,7 @@ class Moderation(commands.Cog):
     @app_commands.guild_only()
     async def mute(
         self,
-        interaction: GXGInteraction,
+        interaction: NASAInteraction,
         user: discord.Member,
         reason: str | None,
         duration: str,
@@ -97,7 +97,7 @@ class Moderation(commands.Cog):
     @app_commands.default_permissions(moderate_members=True)
     async def warn(
         self,
-        interaction: GXGInteraction,
+        interaction: NASAInteraction,
         member: discord.Member,
         reason: app_commands.Range[str, 15, 300],
     ):
@@ -148,7 +148,7 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name="infractions")  # type: ignore
     @app_commands.default_permissions(moderate_members=True)
-    async def infractions(self, interaction: GXGInteraction, user: discord.Member):
+    async def infractions(self, interaction: NASAInteraction, user: discord.Member):
         """
         A command to view a users infractions
 
@@ -207,7 +207,7 @@ class Moderation(commands.Cog):
 
     @config.command(name="log-channel")  # type: ignore
     async def set_log_channel(
-        self, interaction: GXGInteraction, channel: discord.TextChannel
+        self, interaction: NASAInteraction, channel: discord.TextChannel
     ):
         """
         A command used to set the log channel
@@ -232,7 +232,7 @@ class Moderation(commands.Cog):
                     content="This view timed out.", view=None
                 )
             elif view.value:
-                self.log_webhook = await channel.create_webhook(name="GXG-Logging")
+                self.log_webhook = await channel.create_webhook(name="NASA-Logging")
                 self.bot.config._update_value("log_webhook_url", self.log_webhook.url)
                 await interaction.response.edit_message(
                     content="You have updated the `Log Channel ID`!", view=None
@@ -242,12 +242,12 @@ class Moderation(commands.Cog):
                     content="The `Log Channel ID` had not been updated!", view=None
                 )
 
-        self.log_webhook = await channel.create_webhook(name="GXG-Logging")
+        self.log_webhook = await channel.create_webhook(name="NASA-Logging")
         self.bot.config._update_value("log_webhook_url", self.log_webhook.url)
 
     @config.command(name="modmail-channel")  # type: ignore
     async def set_modmail_channel(
-        self, interaction: GXGInteraction, channel: discord.ForumChannel
+        self, interaction: NASAInteraction, channel: discord.ForumChannel
     ):
         """
         A command used to set the log channel
@@ -284,6 +284,68 @@ class Moderation(commands.Cog):
 
         self.bot.config._update_value("mailmod_forum_id", channel.id)
         await interaction.response.send_message("You have set the `MailMod Forum ID`!")
+
+
+class Logging(commands.Cog):
+    def __init__(self, bot: NASABot):
+        self.bot = bot
+
+    # Listeners
+    # ---------------------------
+
+    @commands.Cog.listener("on_raw_message_delete")
+    async def deleted_message_logging(self, message: discord.Message):
+        ...
+
+    @commands.Cog.listener("on_raw_message_edit")
+    async def edited_message_logging(
+        self, before: discord.Message, after: discord.Message
+    ):
+        ...
+
+    @commands.Cog.listener("on_member_remove")
+    async def removed_member_logging(self, member: discord.Member):
+        ...
+
+    @commands.Cog.listener("on_member_join")
+    async def joined_member_logging(self, member: discord.Member):
+        ...
+
+    @commands.Cog.listener("on_member_ban")
+    async def banned_member_logging(self, member: discord.Member):
+        ...
+
+    @commands.Cog.listener("on_member_update")
+    async def updated_member_logging(
+        self, before: discord.Member, after: discord.Member
+    ):
+        ...
+
+    # Commands
+    # ---------------------------
+
+    @app_commands.command(name="set-log")
+    @app_commands.default_permissions(administrator=True)
+    async def set_log_channel(
+        self, inter: NASAInteraction, channel: discord.TextChannel
+    ):
+        if self.bot.config.log_channel_id is not None:
+            view = utils.ConfirmationView()
+            await inter.response.send_message(
+                embed=discord.Embed(
+                    title="Log Channel Conflict!",
+                    description="There is already a log channel set, would you like to override it?",
+                ),
+                view=view,
+                ephemeral=True,
+            )
+            await view.wait()
+
+            if view.value is None:
+                await inter.response.edit_message(
+                    view=None, content="This view timed out."
+                )
+        ...
 
 
 async def setup(bot):

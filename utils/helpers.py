@@ -19,7 +19,7 @@ __all__ = (
     "Warning",
     "BlacklistedUser",
     "Mode",
-    "test_database_conn"
+    "test_database_conn",
 )
 
 
@@ -32,6 +32,7 @@ class Mode(Enum):
 @dataclass
 class Configuration:
     warn_threshold: int | None
+    log_channel_id: int | None
     log_webhook_url: str | None
     modmail_forum_id: int | None
     token: str | None
@@ -42,6 +43,9 @@ class Configuration:
     error_webhook_url: str | None
     level_up_channel: int
     lfg_channel: int | None
+    tiktok_channel: int
+    member_channel: int
+    join_to_create_ids: list[int] | None
 
     @classmethod
     def get_config(cls, /) -> Configuration:
@@ -64,10 +68,23 @@ class Configuration:
         except KeyError:
             return None
 
+    def update_log_id(self, _id: int):
+        self.log_channel_id = _id
+
+        self.save()
+
     def update_log_url(self, uri: str) -> Configuration:
         self._update_value("log_webhook_url", uri)
 
         return self
+
+    def update_join_to_create(self, _id: int):
+        if self.join_to_create_ids is None:
+            self.join_to_create_ids = [_id]
+        else:
+            self.join_to_create_ids.append(_id)
+
+        self.save()
 
     async def validate_warn_threshold(
         self, interaction: discord.Interaction, user: discord.Member
@@ -81,10 +98,13 @@ class Configuration:
         else:
             return False
 
-    def close(self):
+    def save(self):
         items = self.__dict__
         with open("config.json", "w") as config:
             json.dump(items, config, indent=4)
+
+    def close(self):
+        self.save()
 
 
 @dataclass
@@ -420,6 +440,7 @@ class LFGEntry:
         embed = discord.Embed(title="Looking for ")
 
         return embed
+
 
 async def test_database_conn(uri: str) -> bool:
     try:

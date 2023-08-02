@@ -9,7 +9,7 @@ import asyncpg
 import discord
 from discord.ext import commands
 
-from src.bot import GXGBot, GXGContext
+from src.bot import NASABot, NASAContext
 
 _logger = logging.getLogger("ErrorLogHandler")
 
@@ -118,12 +118,12 @@ class ErrorLog:
 
 
 class ErrorLogCog(commands.Cog):
-    def __init__(self, bot: GXGBot):
+    def __init__(self, bot: NASABot):
         self.bot = bot
 
     @commands.command(aliases=["e"])
     @commands.is_owner()
-    async def error(self, ctx: GXGContext, error_id: int, raw: bool = False) -> None:
+    async def error(self, ctx: NASAContext, error_id: int, raw: bool = False) -> None:
         """Sends an error from the database.
 
         Parameters
@@ -147,7 +147,7 @@ class ErrorLogCog(commands.Cog):
 
     @commands.command(aliases=["re"])
     @commands.is_owner()
-    async def recenterrors(self, ctx: GXGContext) -> None:
+    async def recenterrors(self, ctx: NASAContext) -> None:
         """Returns the 20 most recently logged errors."""
         errs = await ErrorLog.get_most_recent(ctx.bot.pool, 20)
         embed = discord.Embed(color=discord.Color.blue(), description="")
@@ -159,6 +159,6 @@ class ErrorLogCog(commands.Cog):
             await ctx.send("No errors logged yet.")
 
 
-async def setup(bot: GXGBot):
+async def setup(bot: NASABot):
     _logger.info("Loading cog ErrorLogCog")
     await bot.add_cog(ErrorLogCog(bot))

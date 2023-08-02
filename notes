@@ -1,0 +1,32 @@
+Levelling Formula
+
+5 * (lvl ^ 2) + (50 * lvl) + 100 - xp
+
+Paramters
+
+    lvl is the currentl level of the user
+    xp is the current xp of the user
+
+
+Levelling Rewards
+-----------------
+
+Top 10 messengers of the week get x role with colour.
+Top 10 messengers of the month get custom role with colour (expires at the end of the month)
+
+5, 10 etc role levels 
+
+
+Levelling Changes
+-----------------
+
+Update schema to keep the level in the user's profile too
+Create handlers for level checks, role settings/auto creation
+Add a xp blacklist for users and channels
+
+
+Possible Features
+-----------------
+
+Creating webhooks and setting for repo in github
+Storage of invites and who joined from them

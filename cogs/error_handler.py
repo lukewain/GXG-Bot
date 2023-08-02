@@ -6,28 +6,30 @@ from discord import app_commands
 import traceback
 import logging
 
-from src.bot import GXGBot, GXGContext
+from src.bot import NASABot, NASAContext
 from .errorlog import ErrorLog
 
 _logger = logging.getLogger("ErrorHandler")
 
 
 class ErrorHandler(commands.Cog):
-    def __init__(self, bot: GXGBot):
+    def __init__(self, bot: NASABot):
         self.bot = bot
 
     async def cog_load(self):
         self._default_tree_error = self.bot.tree.on_error
         self.bot.tree.on_error = self.on_app_command_error
+        self.session_errors = 0
 
     async def cog_unload(self):
         self.bot.tree.on_error = self._default_tree_error
 
     async def on_app_command_error(
         self,
-        interaction: discord.Interaction[GXGBot],
+        interaction: discord.Interaction[NASABot],
         error: app_commands.AppCommandError,
     ):
+        self.session_errors += 1
         if isinstance(error, app_commands.CommandOnCooldown):
             if interaction.response.is_done():
                 return await interaction.followup.send(
@@ -46,6 +48,8 @@ class ErrorHandler(commands.Cog):
                 traceback=trace,
                 item=f"Command: {interaction.command.name if interaction.command else '<Name not found>'}",
             )
+
+            self.bot.dispatch("errorlog_create", errorlog)
 
             _logger.error(f"Ignoring exception in app command {interaction.command}")
             _logger.error(trace)
@@ -67,11 +71,13 @@ class ErrorHandler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(
-        self, ctx: GXGContext, error: commands.CommandError
+        self, ctx: NASAContext, error: commands.CommandError
     ) -> None:
         # testing leaving this off
         # if hasattr(ctx.command, 'on_error'):
         #     return
+
+        self.session_errors += 1
 
         cog = ctx.cog
         if cog:
@@ -169,7 +175,22 @@ class ErrorHandler(commands.Cog):
             except (discord.Forbidden, discord.HTTPException):
                 _logger.error(f"Could not send error notification in {ctx.channel.id=}")
 
+    @commands.Cog.listener()
+    async def on_level_error(self, channel: discord.abc.Messageable, error: str):
+        errorlog = await ErrorLog.create(
+            self.bot.pool, traceback=error, item=f"XP Gain event"
+        )
 
-async def setup(bot: GXGBot):
+        await channel.send(embed=errorlog.pub_embed)
+
+    @commands.command(name="total-errors", aliases=["te"])
+    @commands.is_owner()
+    async def totalerrors(self, ctx: NASAContext):
+        await ctx.send(
+            f"There has been a total of {self.totalerrors} errors this session"
+        )
+
+
+async def setup(bot: NASABot):
     _logger.info("Loading cog ErrorHandler")
     await bot.add_cog(ErrorHandler(bot))
