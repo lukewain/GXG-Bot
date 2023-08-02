@@ -29,11 +29,14 @@ class NASAMember:
         embed = discord.Embed(title="Current Rank")
         embed.colour = discord.Colour.from_str("#687198")
 
+        xp_for_next = (
+            5 * (self.level**2) + (50 * self.level) + 100 - self.overflow_xp
+        ) - self.overflow_xp
+
         embed.description = f"""```
 Rank: {self.level}
-XP to next: {self.overflow_xp} XP
-Messages: {self.messages}
-        ```"""
+XP to next: {xp_for_next} XP
+Messages: {self.messages}```"""
 
         return embed
 
