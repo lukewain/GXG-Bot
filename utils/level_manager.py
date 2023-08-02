@@ -154,8 +154,9 @@ class LevelManager:
         # Update the new member information
 
         await self._pool.execute(
-            "UPDATE levels SET messages = messages + 1, overflow_xp=$1, level=$2 WHERE id=$3",
+            "UPDATE levels SET messages = messages + 1, overflow_xp=$1, level=$2, last_gained=$3 WHERE id=$4",
             member.overflow_xp,
             member.level,
+            round(datetime.datetime().now().timestamp()),
             member.id,
         )
