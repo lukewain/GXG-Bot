@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 
 import typing
@@ -44,18 +45,17 @@ class Levelling(commands.Cog):
     # Commands
     # --------------------------------
 
-    @commands.hybrid_group(name="rank")
-    @is_blacklisted()
-    async def rank(self, ctx: NASAContext, user: typing.Optional[discord.Member]):
+    @app_commands.command(name="rank")
+    async def rank(self, inter: NASAInteraction, user: typing.Optional[discord.Member]):
         if user:
             data = user
         else:
-            data = ctx.author
+            data = inter.user
         member = await self.bot.level_manager.fetch_user(data)
         if member:
-            await ctx.reply(embed=member.rank_embed)
+            await inter.response.send_message(embed=member.rank_embed)
         else:
-            await ctx.reply(content="You are not yet ranked")
+            await inter.response.send_message(content="You are not yet ranked")
 
 
 async def setup(bot: NASABot):
