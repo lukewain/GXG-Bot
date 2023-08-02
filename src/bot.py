@@ -101,6 +101,7 @@ class NASABot(commands.Bot):
         await self.load_extension("cogs.voices")
         await self.load_extension("cogs.scheduled_tasks")
         await self.load_extension("cogs.custom_event_handler")
+        await self.load_extension("cogs.levelling")
         # await self.load_extension("cogs.moderation")
         # await self.load_extension("cogs.testing")
 
