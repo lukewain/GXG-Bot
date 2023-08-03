@@ -25,6 +25,13 @@ class CustomEventHandler(commands.Cog):
     async def delete_me(self, inter: discord.Interaction):
         pprint(inter.data)
 
+    @commands.Cog.listener("on_disconnect")
+    async def disconnected(self):
+        await self.error_webhook.send(
+            embed=discord.Embed(title="The bot is disconnected!"),
+            content=f"<@{self.owner_id}>",
+        )
+
 
 async def setup(bot: NASABot):
     await bot.add_cog(CustomEventHandler(bot))
