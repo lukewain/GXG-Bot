@@ -49,9 +49,15 @@ class NASABot(commands.Bot):
         intents.message_content = True
         intents.members = True
 
-        self.owner_ids = (874953578509381652, 268815279570681857)
+        self.owner_id = 268815279570681857
 
-        super().__init__(command_prefix=".", intents=intents)
+        super().__init__(
+            command_prefix=".",
+            intents=intents,
+            allowed_mentions=discord.AllowedMentions(
+                everyone=False, users=True, roles=True, replied_user=True
+            ),
+        )
 
     async def get_context(self, message, *, cls=NASAContext):
         # when you override this method, you pass your new Context
@@ -117,5 +123,9 @@ class NASABot(commands.Bot):
         _logger.info(f"Logged in as {self.user}")
 
     async def close(self):
+        await self.error_webhook.send(
+            embed=discord.Embed(title="The bot is disconnected!"),
+            content=f"<@{self.owner_id}>",
+        )
         self.config.close()
         await super().close()
