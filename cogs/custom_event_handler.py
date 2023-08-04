@@ -27,7 +27,7 @@ class CustomEventHandler(commands.Cog):
 
     @commands.Cog.listener("on_disconnect")
     async def disconnected(self):
-        await self.error_webhook.send(
+        await self.bot.error_webhook.send(
             embed=discord.Embed(title="The bot is disconnected!"),
             content=f"<@{self.owner_id}>",
         )
