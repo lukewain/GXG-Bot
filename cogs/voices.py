@@ -96,6 +96,7 @@ class Voices(commands.Cog):
             before.channel is not None
             and len(before.channel.members) == 0
             and before.channel.id not in self.bot.config.join_to_create_ids
+            and before.channel.id in self.voice_handler.channel_cache.keys()
         ):
             await before.channel.delete()
 
