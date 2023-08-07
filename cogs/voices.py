@@ -53,6 +53,9 @@ class VoiceHandler:
             if c.owner_id == owner_id:
                 return c.channel_id
 
+    def __repr__(self):
+        return f"<Voice handler with {len(self.channel_cache)} active voice channel{'s' if len(self.channel_cache) > 1 or len(self.channel_cache) == 0 else ''}>"
+
 
 class Voices(commands.Cog):
     def __init__(self, bot: src.NASABot):
@@ -141,6 +144,11 @@ class Voices(commands.Cog):
 
         self.bot.config.update_join_to_create(voice.id)
         logger.info("Updated join_to_create_ids")
+
+    @commands.command(name="listvoice", aliases=["lv"])
+    @commands.is_owner()
+    async def listvoices(self, ctx: src.NASAContext):
+        await ctx.reply(self.voice_handler)
 
 
 async def setup(bot: src.NASABot):
