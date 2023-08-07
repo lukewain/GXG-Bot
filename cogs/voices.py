@@ -112,6 +112,10 @@ class Voices(commands.Cog):
             and before.channel.id in self.voice_handler.channel_cache.keys()
         ):
             logger.warn(f"{before.channel.name} is empty, deleting!")
+            self.voice_handler.channel_cache.pop(before.channel.id)
+            logger.warn(
+                f"There are now {len(self.voice_handler.channel_cache)} channel{'s' if len(self.voice_handler.channel_cache) > 1 or len(self.voice_handler.channel_cache) == 0 else ''}"
+            )
             await before.channel.delete()
 
         elif before.channel is not None and len(before.channel.members) > 0:
