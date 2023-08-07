@@ -33,7 +33,10 @@ class VoiceHandler:
         self.channel_cache[voicestate.channel_id] = voicestate
 
     def get_handler(self, channel_id: int) -> VoiceChannel:
-        return self.channel_cache[channel_id]
+        try:
+            return self.channel_cache[channel_id]
+        except KeyError:
+            ...
 
     def update_handler(self, voicestate: VoiceChannel):
         self.channel_cache[voicestate.channel_id] = voicestate
@@ -44,6 +47,11 @@ class VoiceHandler:
         member = await self.bot.get_or_fetch(voicestate.owner)
 
         return member
+
+    def already_has(self, owner_id: int) -> int | None:
+        for _, c in self.channel_cache:
+            if c.owner_id == owner_id:
+                return c.channel_id
 
 
 class Voices(commands.Cog):
@@ -81,6 +89,11 @@ class Voices(commands.Cog):
             and after.channel.id in self.bot.config.join_to_create_ids
         ):
             logger.info(f"{member} joined <join_to_create>")
+            already_exists = self.voice_handler.already_has(member.id)
+            if already_exists is not None:
+                logger.info(f"{member} already has a channel!")
+                c = await self.bot.get_or_fetch_channel(already_exists)
+                return await member.move_to(c)
             plural = "'" if member.name.endswith("s") else "'s"
             new_vc = await after.channel.category.create_voice_channel(
                 name=f"{member.name}{plural} Channel"
@@ -98,6 +111,7 @@ class Voices(commands.Cog):
             and before.channel.id not in self.bot.config.join_to_create_ids
             and before.channel.id in self.voice_handler.channel_cache.keys()
         ):
+            logger.warn(f"{before.channel.name} is empty, deleting!")
             await before.channel.delete()
 
         elif before.channel is not None and len(before.channel.members) > 0:
