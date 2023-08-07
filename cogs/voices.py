@@ -50,7 +50,7 @@ class VoiceHandler:
 
     def already_has(self, owner_id: int) -> int | None:
         for c in self.channel_cache.values():
-            if c.owner_id == owner_id:
+            if c.owner == owner_id:
                 return c.channel_id
 
     def __repr__(self):
