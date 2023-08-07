@@ -19,3 +19,7 @@ class EmergentEvents(commands.Cog):
             await self.bot.error_webhook.send(
                 f"<@268815279570681857> {before.channel.name} is empty"
             )
+
+
+async def setup(bot: src.NASABot):
+    await bot.add_cog(EmergentEvents(bot))
