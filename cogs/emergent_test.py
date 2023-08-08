@@ -15,7 +15,7 @@ class EmergentEvents(commands.Cog):
         before: discord.VoiceState,
         after: discord.VoiceState,
     ):
-        if len(before.channel.members) == 0:
+        if before.channel and len(before.channel.members) == 0:
             await self.bot.error_webhook.send(
                 f"<@268815279570681857> {before.channel.name} is empty"
             )
