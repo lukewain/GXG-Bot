@@ -45,6 +45,9 @@ class NASABot(commands.Bot):
         self.level_manager = utils.LevelManager(self.pool, self)
         self.config = config
 
+        self.error_log_file = "/home/pi/.pm2/logs/GXG-Bot-error.log"
+        self.stdout_log_file = "/home/pi/.pm2/logs/GXG-Bot.log"
+
         intents = discord.Intents.default()
         intents.message_content = True
         intents.members = True
@@ -79,9 +82,14 @@ class NASABot(commands.Bot):
     async def get_or_fetch(self, user: int) -> discord.Member | discord.User:
         m = self.get_user(user)
         if not m:
-            m = self.fetch_user(user)
+            m = await self.fetch_user(user)
 
         return m
+
+    async def get_or_fetch_channel(self, cid: int) -> discord.TextChannel:
+        c = self.get_channel(cid)
+        if not c:
+            c = await self.fetch_channel(cid)
 
     async def setup_hook(self):
         # Set up the level manager
@@ -123,9 +131,5 @@ class NASABot(commands.Bot):
         _logger.info(f"Logged in as {self.user}")
 
     async def close(self):
-        await self.error_webhook.send(
-            embed=discord.Embed(title="The bot is disconnected!"),
-            content=f"<@{self.owner_id}>",
-        )
         self.config.close()
         await super().close()
