@@ -13,7 +13,9 @@ class LogCommands(commands.Cog):
         with open(self.bot.error_log_file) as el:
             d = el.readlines()
 
-        await ctx.reply(f"```{d[:15]}```")
+        formatted = d[:15]
+
+        await ctx.reply(f"```{''.join(formatted)}```")
 
     @commands.command(name="stdout")
     async def stdout(self, ctx: NASAContext):
