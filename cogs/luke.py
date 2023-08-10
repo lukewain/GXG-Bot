@@ -18,3 +18,7 @@ class LogCommands(commands.Cog):
     @commands.command(name="stdout")
     async def stdout(self, ctx: NASAContext):
         ...
+
+
+async def setup(bot: NASABot):
+    await bot.add_cog(LogCommands(bot))
