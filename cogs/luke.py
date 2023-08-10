@@ -15,6 +15,6 @@ class LogCommands(commands.Cog):
 
         await ctx.reply(f"```{d[:15]}```")
 
-    @commands.commmand(name="stdout")
+    @commands.command(name="stdout")
     async def stdout(self, ctx: NASAContext):
         ...
