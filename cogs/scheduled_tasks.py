@@ -34,9 +34,17 @@ class ScheduledTasks(commands.Cog):
 
         soup = BeautifulSoup(txt_res, "html.parser")
 
-        follower_count = soup.select_one('[title="Followers"]').text
+        try:
+            follower_count = soup.select_one('[title="Followers"]').text
 
-        await self.bot.tiktok_channel.edit(name=f"Tiktok Followers: {follower_count}")
+            await self.bot.tiktok_channel.edit(
+                name=f"Tiktok Followers: {follower_count}"
+            )
+
+        except AttributeError:
+            await self.bot.error_webhook.send(
+                f"<@{self.bot.owner_id}> Tiktok Followers failed."
+            )
 
     @update_tiktok_followers.before_loop
     async def before_tiktok(self):
