@@ -46,7 +46,7 @@ class NASABot(commands.Bot):
         self.config = config
 
         self.error_log_file = "/home/pi/.pm2/logs/GXG-Bot-error.log"
-        self.stdout_log_file = "/home/pi/.pm2/logs/GXG-Bot.log"
+        self.stdout_log_file = "/home/pi/.pm2/logs/GXG-Bot-out.log"
 
         intents = discord.Intents.default()
         intents.message_content = True
