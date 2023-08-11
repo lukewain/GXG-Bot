@@ -13,7 +13,7 @@ class LogCommands(commands.Cog):
         with open(self.bot.error_log_file) as el:
             d = el.readlines()
 
-        formatted = d[::20]
+        formatted = d[-20:]
 
         await ctx.reply(f"```{''.join(formatted)}```")
 
@@ -22,7 +22,7 @@ class LogCommands(commands.Cog):
         with open(self.bot.stdout_log_file) as sl:
             d = sl.readlines()
 
-        formatted = d[::20]
+        formatted = d[-20:]
 
         await ctx.reply(f"```{formatted}```")
 
