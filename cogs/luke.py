@@ -15,7 +15,9 @@ class LogCommands(commands.Cog):
 
         formatted = d[-20:]
 
-        await ctx.reply(f"```{''.join(formatted)}```")
+        string = "".join(formatted)
+
+        await ctx.reply(f"```{discord.utils.escape_markdown(string)}```")
 
     @commands.command(name="stdout")
     async def stdout(self, ctx: NASAContext):
@@ -24,7 +26,9 @@ class LogCommands(commands.Cog):
 
         formatted = d[-20:]
 
-        await ctx.reply(f"```{formatted}```")
+        string = "".join(formatted)
+
+        await ctx.reply(f"```{discord.utils.escape_markdown(string)}```")
 
 
 async def setup(bot: NASABot):
