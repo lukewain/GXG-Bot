@@ -65,7 +65,7 @@ class RankCard:
         # )
         # self.draw = ImageDraw.Draw(self.canvas)
 
-    async def async_init(self, pool: asyncpg.Pool[asyncpg.Record]):
+    async def async_init(self, pool: asyncpg.Pool):
         self._avatar = self.author.display_avatar.read()
 
         # Ranked info
