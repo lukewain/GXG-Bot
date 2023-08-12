@@ -5,9 +5,10 @@ from discord.ext import commands
 import typing
 from typing import NamedTuple
 import asyncpg
-import aggdraw
-from PIL import Image, ImageDraw, ImageFilter, Imagefont
-from jishaku.functools import executor_function
+
+# import aggdraw
+# from PIL import Image, ImageDraw, ImageFilter, Imagefont
+# from jishaku.functools import executor_function
 import io
 import itertools
 
@@ -59,10 +60,10 @@ class RankCard:
         self.author: discord.abc.User = author
         self._data: utils.NASAMember | None = None
         self._avatar: bytes | None = None
-        self.canvas = Image.new(
-            "RGB", (self.WIDTH, self.HEIGHT), self.BG_COLOR.to_rgb()
-        )
-        self.draw = ImageDraw.Draw(self.canvas)
+        # self.canvas = Image.new(
+        # "RGB", (self.WIDTH, self.HEIGHT), self.BG_COLOR.to_rgb()
+        # )
+        # self.draw = ImageDraw.Draw(self.canvas)
 
     async def async_init(self, pool: asyncpg.Pool[asyncpg.Record]):
         self._avatar = self.author.display_avatar.read()
@@ -94,7 +95,7 @@ class RankCard:
             raise RuntimeError("Class not initialised, please call :coro:`.async_init`")
         return self._avatar
 
-    @executor_function
+    # @executor_function
     def full_render(self) -> io.BytesIO:
         buffer = io.BytesIO()
 
@@ -106,52 +107,53 @@ class RankCard:
 
     # Image modifiers
     def add_corners(
-        slef, image: Image.Image, radius: int, top_radius: int | None = None
+        # slef, image: Image.Image, radius: int, top_radius: int | None = None
     ):
         """Generate round corner for image"""
-        if top_radius is None:
-            top_radius = radius
-        mask = Image.new("L", image.size)
-        draw = aggdraw.Draw(mask)
-        brush = aggdraw.Brush("white")
-        width, height = mask.size
-        # upper-left corner
-        draw.pieslice((0, 0, top_radius * 2, top_radius * 2), 90, 180, None, brush)
-        # upper-right corner
-        draw.pieslice(
-            (width - top_radius * 2, 0, width, top_radius * 2), 0, 90, None, brush
-        )
-        # bottom-left corner
-        draw.pieslice(
-            (0, height - radius * 2, radius * 2, height), 180, 270, None, brush
-        )
-        # bottom-right corner
-        draw.pieslice(
-            (width - radius * 2, height - radius * 2, width, height),
-            270,
-            360,
-            None,
-            brush,
-        )
-        # center rectangle
-        draw.rectangle((radius, radius, width - radius, height - radius), brush)
 
-        # four edge rectangle
-        draw.rectangle((top_radius, 0, width - top_radius, top_radius), brush)
-        draw.rectangle((0, top_radius, top_radius, height - radius), brush)
-        draw.rectangle((radius, height - radius, width - radius, height), brush)
-        draw.rectangle((width - top_radius, top_radius, width, height - radius), brush)
-        draw.flush()
-        image = image.convert("RGBA")
-        image.putalpha(mask)
-        return image
+    #     if top_radius is None:
+    #         top_radius = radius
+    #     mask = Image.new("L", image.size)
+    #     draw = aggdraw.Draw(mask)
+    #     brush = aggdraw.Brush("white")
+    #     width, height = mask.size
+    #     # upper-left corner
+    #     draw.pieslice((0, 0, top_radius * 2, top_radius * 2), 90, 180, None, brush)
+    #     # upper-right corner
+    #     draw.pieslice(
+    #         (width - top_radius * 2, 0, width, top_radius * 2), 0, 90, None, brush
+    #     )
+    #     # bottom-left corner
+    #     draw.pieslice(
+    #         (0, height - radius * 2, radius * 2, height), 180, 270, None, brush
+    #     )
+    #     # bottom-right corner
+    #     draw.pieslice(
+    #         (width - radius * 2, height - radius * 2, width, height),
+    #         270,
+    #         360,
+    #         None,
+    #         brush,
+    #     )
+    #     # center rectangle
+    #     draw.rectangle((radius, radius, width - radius, height - radius), brush)
 
-    # Image generations
-    def paste_xp_bar(self):
-        canvas = Image.new("RGBA", (self.WIDTH, self.STATUSBAR_HEIGHT), "white")
-        draw = ImageDraw.Draw(canvas)
+    #     # four edge rectangle
+    #     draw.rectangle((top_radius, 0, width - top_radius, top_radius), brush)
+    #     draw.rectangle((0, top_radius, top_radius, height - radius), brush)
+    #     draw.rectangle((radius, height - radius, width - radius, height), brush)
+    #     draw.rectangle((width - top_radius, top_radius, width, height - radius), brush)
+    #     draw.flush()
+    #     image = image.convert("RGBA")
+    #     image.putalpha(mask)
+    #     return image
 
-        offset = self.WIDTH - self._data.overflow_xp
+    # # Image generations
+    # def paste_xp_bar(self):
+    #     canvas = Image.new("RGBA", (self.WIDTH, self.STATUSBAR_HEIGHT), "white")
+    #     draw = ImageDraw.Draw(canvas)
+
+    #     offset = self.WIDTH - self._data.overflow_xp
 
 
 # Checks
